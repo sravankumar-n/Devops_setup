@@ -1,0 +1,27 @@
+---
+- hosts: local
+  connection: local
+  become: true
+  tasks:
+  - name: install java
+    yum:
+	  name: java-1.8.0-openjdk-devel
+	  state: installed
+  - name: add jenkins.repo to yum.repos.d 
+    get_url:
+	  url: http://pkg.jenkins-ci.org/redhat-stable/jenkins.repo
+	  dest: /etc/yum.repos.d/jenkins.repo
+  - name: add key
+    rpm_key:
+      state: present
+	  key: https://jenkins-ci.org/redhat/jenkins-ci.org.key
+  - name: install jenkins
+    yum: 
+	  name: jenkins
+	  state: installed
+  - name: start the jenkins service
+    service: 
+	  name: jenkins
+	  state: started
+	  enabled: yes
+  
