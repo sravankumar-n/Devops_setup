@@ -1,0 +1,108 @@
+version: '2'
+services:
+  gitlab:
+   image: 'docker.io/gitlab/gitlab-ce'
+#  restart: always
+   hostname: 'gitlab'
+   links:
+     - postgresql:postgresql
+   environment:
+     GITLAB_OMNIBUS_CONFIG: |
+       postgresql['enable'] = false
+       gitlab_rails['db_username'] = "gitlab"
+       gitlab_rails['db_password'] = "gitlab"
+       gitlab_rails['db_host'] = "postgresql"
+       gitlab_rails['db_port'] = "5432"
+       gitlab_rails['db_database'] = "gitlabhq_production"
+       gitlab_rails['db_adapter'] = 'postgresql'
+       gitlab_rails['db_encoding'] = 'utf8'
+       external_url 'http://10.112.78.152:30080'
+       gitlab_rails['gitlab_shell_ssh_port'] = 30022
+   ports:
+     # both ports must match the port from external_url above
+     - "30080:30080"
+     # the mapped port must match ssh_port specified above.
+     - "30022:22"
+# the following are hints on what volumes to mount if you want to persist data
+   volumes:
+     - /home/volumes/gitlab/etc/gitlab:/etc/gitlab
+     - /home/volumes/gitlab/var/log/gitlab:/var/log/gitlab
+     - /home/volumes/gitlab/var/home/gitlab:/var/home/gitlab
+
+  postgresql:
+#  restart: always
+   image: postgres:9.6.2-alpine
+   environment:
+     - POSTGRES_USER=gitlab
+     - POSTGRES_PASSWORD=gitlab
+     - POSTGRES_DB=gitlabhq_production
+# the following are hints on what volumes to mount if you want to persist data
+   volumes:
+     - /home/volumes/postgresql/var/lib/postgresql/data:/var/lib/postgresql/data
+
+#       gitlab_rails['redis_host'] = 'redis'
+#       gitlab_rails['redis_port'] = '6379'
+#       redis['enable'] = false
+
+  gerrit: 
+    image: openfrontier/gerrit
+    hostname: gerrit
+    ports:
+        - "5085:8080"
+        - "29418:29418"
+    links: 
+      - gitlab
+    volumes: 
+        - /home/volumes/gerrit/openfrontier/gerrit:/openfrontier/gerrit
+    environment: 
+       AUTH_TYPE: DEVELOPMENT_BECOME_ANY_ACCOUNT 
+       GIT_SERVER_IP: gitlab
+       GIT_SERVER_PORT: 80 
+       GIT_SERVER_USER: root 
+       GIT_SERVER_PASSWORD: root123 
+       GIT_SERVER_PROJ_ROOT: root
+#       GERRIT_ADMIN_USER: admin
+#       GERRIT_ADMIN_EMAIL: amit-an@hcl.com
+#       GERRIT_ADMIN_FULLNAME: Administrator
+#       GERRIT_ADMIN_PWD: root123 
+#       GERRIT_ACCOUNTS: jenkins,jenkins,jenkins@fabric8.io,secret,Non-Interactive Users:Administrators;amit-an,amit-an@hcl.com,f00123,Non-Interactive Users
+# format <user_id><full_name><email><password><roles/groups> delimitted by ; 
+    
+  sonarqube: 
+    image: sonarqube
+    hostname: sonarqube
+    ports:
+        - "59000:9000"
+    volumes: 
+        - /home/volumes/sonarqube/home/sonarqube/data:/home/sonarqube/data
+
+  nexus: 
+    image: sonatype/nexus3
+    hostname: nexus
+    ports: 
+        - "58081:8081"
+    links: 
+      - jenkins
+    volumes: 
+        - /home/volumes/nexus/sonatype-work:/sonatype-work
+  
+  jira:
+    image: cptactionhank/atlassian-jira-software
+    hostname: jira
+    volumes: 
+        - /home/volumes/jira/home/atlassian/jira/logs:/home/atlassian/jira/logs
+        - /home/volumes/jira/var/atlassian/jira:/var/atlassian/jira
+    ports: 
+        - "8080:8080"
+
+  jenkins: 
+    image: jenkins
+    hostname: jenkins
+    ports: 
+        - "58080:8080"
+        - "50000:50000"
+    links: 
+      - gitlab
+    volumes: 
+        - /home/volumes/jenkins/var/jenkins_home:/var/jenkins_home
+
